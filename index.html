@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Classic Games</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="game-menu">
+        <h1>Classic Games</h1>
+        <label class="game-select-label" for="gameSelect">Choose a game</label>
+        <select id="gameSelect" class="game-select">
+          <option value="tetris-game">Tetris</option>
+          <option value="breakout-game">Breakout</option>
+          <option value="pong-game">Pong (2 Player)</option>
+          <option value="eightball-game">8 Ball</option>
+        </select>
+      </header>
+
+      <section class="game-view" id="tetris-game">
+        <header class="topbar">
+          <div class="title-wrap">
+            <div class="title">Tetris</div>
+            <div class="subtitle">Neon stack</div>
+          </div>
+          <div class="hud">
+            <div class="stat">
+              <span class="label">Score</span>
+              <span id="score">0</span>
+            </div>
+            <div class="stat">
+              <span class="label">Level</span>
+              <span id="level">1</span>
+            </div>
+            <div class="stat">
+              <span class="label">Lines</span>
+              <span id="lines">0</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="game-panel">
+          <canvas id="gameCanvas" width="300" height="600" aria-label="Tetris board"></canvas>
+
+          <aside class="side-panel">
+            <div class="panel-box">
+              <h2>Next</h2>
+              <canvas id="nextCanvas" width="120" height="120" aria-label="Next tetromino"></canvas>
+            </div>
+            <div class="panel-box controls-box">
+              <h2>Controls</h2>
+              <ul>
+                <li>← → move</li>
+                <li>↑ rotate</li>
+                <li>↓ soft drop</li>
+                <li>space hard drop</li>
+                <li>P pause</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+
+        <div class="controls">
+          <button id="startBtn" type="button">Start / Restart</button>
+        </div>
+      </section>
+
+      <section class="game-view breakout-view" id="breakout-game" hidden>
+        <header class="topbar">
+          <div class="title-wrap">
+            <div class="title">Breakout</div>
+            <div class="subtitle">Classic arcade</div>
+          </div>
+          <div class="hud">
+            <div class="stat">
+              <span class="label">Score</span>
+              <span id="breakoutScore">0</span>
+            </div>
+            <div class="stat">
+              <span class="label">Lives</span>
+              <span id="breakoutLives">3</span>
+            </div>
+          </div>
+        </header>
+
+        <canvas id="breakoutCanvas" width="800" height="600" aria-label="Breakout game board"></canvas>
+        <p class="breakout-help">Move with <strong>← →</strong> or <strong>A / D</strong>. Press <strong>Space</strong> to launch.</p>
+        <div class="controls">
+          <button id="breakoutStartBtn" type="button">Start / Restart</button>
+        </div>
+      </section>
+
+      <section class="game-view pong-view" id="pong-game" hidden>
+        <header class="topbar">
+          <div class="title-wrap">
+            <div class="title">Pong</div>
+            <div class="subtitle">Two-player showdown</div>
+          </div>
+          <div class="hud">
+            <div class="stat">
+              <span class="label">Player 1</span>
+              <span id="pongScore1">0</span>
+            </div>
+            <div class="stat">
+              <span class="label">Player 2</span>
+              <span id="pongScore2">0</span>
+            </div>
+          </div>
+        </header>
+
+        <canvas id="pongCanvas" width="800" height="500" aria-label="Two-player Pong game board"></canvas>
+        <p class="pong-help">Player 1: <strong>W / S</strong> · Player 2: <strong>↑ / ↓</strong> · <strong>Space</strong> to serve · First to 7 wins.</p>
+        <div class="controls">
+          <button id="pongStartBtn" type="button">Start / Restart</button>
+        </div>
+      </section>
+
+      <section class="game-view eightball-view" id="eightball-game" hidden>
+        <header class="topbar">
+          <div class="title-wrap">
+            <div class="title">8 Ball</div>
+            <div class="subtitle">Pocket your group, then sink the 8</div>
+          </div>
+          <div class="hud">
+            <div class="stat">
+              <span class="label">Turn</span>
+              <span id="eightballTurn">Player 1</span>
+            </div>
+            <div class="stat">
+              <span class="label">Player 1</span>
+              <span id="eightballGroup1">Open</span>
+            </div>
+            <div class="stat">
+              <span class="label">Player 2</span>
+              <span id="eightballGroup2">Open</span>
+            </div>
+          </div>
+        </header>
+
+        <canvas id="eightballCanvas" width="900" height="500" aria-label="8 Ball pool table"></canvas>
+        <p class="eightball-help" id="eightballMessage" aria-live="polite">Aim with your mouse. Hold and release to shoot.</p>
+        <div class="controls">
+          <button id="eightballStartBtn" type="button">New Game</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+    <script src="breakout.js"></script>
+    <script src="pong.js"></script>
+    <script src="eightball.js"></script>
+    <script>
+      const gameSelect = document.getElementById('gameSelect');
+      const gamePanels = document.querySelectorAll('.game-view');
+
+      gameSelect.addEventListener('change', () => {
+        for (const panel of gamePanels) {
+          panel.hidden = panel.id !== gameSelect.value;
+        }
+      });
+    </script>
+  </body>
+</html>
