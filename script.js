@@ -1,119 +1,102 @@
+const gameNames = {
+  'tetris-game': 'Tetris',
+  'breakout-game': 'Breakout',
+  'pong-game': 'Pong',
+  'eightball-game': '8 Ball',
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   const select = document.getElementById('gameSelect');
-  if (select) {
-    select.value = 'tetris-game';
-  }
-
   const codeBtn = document.getElementById('secretCodeBtn');
   const codeModal = document.getElementById('codeModal');
   const codeInput = document.getElementById('codeInput');
   const submitCodeBtn = document.getElementById('submitCodeBtn');
-  const closeCodeModal = document.getElementById('closeCodeModal');
+  const closeCodeModalBtn = document.getElementById('closeCodeModal');
   const toast = document.getElementById('toast');
+  const gamePanels = document.querySelectorAll('.game-view');
+
+  const setGame = (gameId) => {
+    for (const panel of gamePanels) {
+      panel.hidden = panel.id !== gameId;
+    }
+    document.title = `${gameNames[gameId] || 'Classic Games'} | Classic Games`;
+  };
 
   const showToast = (message) => {
     toast.textContent = message;
     toast.classList.remove('hidden');
-    clearTimeout(showToast.timeoutId);
-    showToast.timeoutId = setTimeout(() => {
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => {
       toast.classList.add('hidden');
     }, 2200);
   };
 
   const openCodeModal = () => {
     codeModal.classList.remove('hidden');
-    codeModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
     setTimeout(() => codeInput.focus(), 50);
   };
 
-  const closeCodeModalFn = () => {
+  const closeCodeModal = () => {
     codeModal.classList.add('hidden');
-    codeModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
     codeInput.value = '';
   };
 
-  const currentGameKey = () => select ? select.value : 'tetris-game';
-
-  const gameNames = {
-    'tetris-game': 'Tetris',
-    'breakout-game': 'Breakout',
-    'pong-game': 'Pong',
-    'eightball-game': '8 Ball',
-    'chess-game': 'Chess',
-  };
-
-  const awardExtraLife = () => {
-    const gameName = gameNames[currentGameKey()] || 'this game';
-    const current = Number(window.gameCheatState?.extraLife || 0);
-    window.gameCheatState = window.gameCheatState || {};
-    window.gameCheatState.extraLife = current + 1;
-    showToast(`EXTRA: +1 life for ${gameName}`);
-  };
-
-  const closeTabCode = () => {
-    try {
-      window.close();
-    } catch (error) {
-      // Ignore. Browser blocks direct close.
-    }
-
-    if (!window.closed) {
-      showToast('FRIEND: browser blocked auto-close. Please close the tab manually.');
-    } else {
-      showToast('FRIEND: tab closing...');
-    }
-  };
-
-  const handleCodeInput = () => {
-    const code = codeInput.value.trim().toUpperCase();
-    if (!code) {
-      showToast('Enter a code first');
-      return;
-    }
-
-    const commands = {
-      EXTRA: awardExtraLife,
-      FRIEND: closeTabCode,
-    };
-
-    const action = commands[code];
-    if (!action) {
-      showToast('That code does not exist');
-      return;
-    }
-
-    action();
-    closeCodeModalFn();
-  };
+  if (select) {
+    select.value = 'tetris-game';
+    setGame(select.value);
+    select.addEventListener('change', () => {
+      setGame(select.value);
+    });
+  }
 
   if (codeBtn) {
     codeBtn.addEventListener('click', openCodeModal);
   }
 
-  if (closeCodeModal) {
-    closeCodeModal.addEventListener('click', closeCodeModalFn);
+  if (closeCodeModalBtn) {
+    closeCodeModalBtn.addEventListener('click', closeCodeModal);
+  }
+
+  if (codeModal) {
+    codeModal.addEventListener('click', (event) => {
+      if (event.target === codeModal) closeCodeModal();
+    });
   }
 
   if (submitCodeBtn) {
-    submitCodeBtn.addEventListener('click', handleCodeInput);
+    submitCodeBtn.addEventListener('click', () => {
+      const code = (codeInput.value || '').trim().toUpperCase();
+      if (!code) {
+        showToast('Enter a code');
+        return;
+      }
+
+      if (code === 'EXTRA') {
+        showToast('EXTRA: +1 life for this game');
+      } else if (code === 'FRIEND') {
+        showToast('FRIEND: close the tab manually');
+        try {
+          window.close();
+        } catch (error) {
+          // browser blocked closing; keep toast as notice
+        }
+      } else {
+        showToast('Code not found');
+      }
+
+      closeCodeModal();
+    });
   }
 
   if (codeInput) {
     codeInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
-        handleCodeInput();
+        submitCodeBtn.click();
       }
     });
   }
-
-  codeModal.addEventListener('click', (event) => {
-    if (event.target === codeModal) {
-      closeCodeModalFn();
-    }
-  });
-
-  window.gameCheatState = window.gameCheatState || {};
-  window.gameCheatState.extraLife = Number(window.gameCheatState.extraLife || 0);
 
   console.log('Classic Games site loaded.');
 });
