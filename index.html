@@ -9,14 +9,21 @@
   <body>
     <main class="game-shell">
       <header class="game-menu">
-        <h1>Classic Games</h1>
-        <label class="game-select-label" for="gameSelect">Choose a game</label>
-        <select id="gameSelect" class="game-select">
-          <option value="tetris-game">Tetris</option>
-          <option value="breakout-game">Breakout</option>
-          <option value="pong-game">Pong (2 Player)</option>
-          <option value="eightball-game">8 Ball</option>
-        </select>
+        <div class="menu-left">
+          <h1>Classic Games</h1>
+        </div>
+
+        <div class="menu-actions">
+          <label class="game-select-label" for="gameSelect">Choose a game</label>
+          <select id="gameSelect" class="game-select">
+            <option value="tetris-game">Tetris</option>
+            <option value="breakout-game">Breakout</option>
+            <option value="pong-game">Pong (2 Player)</option>
+            <option value="eightball-game">8 Ball</option>
+            <option value="chess-game">Chess</option>
+          </select>
+          <button id="secretCodeBtn" class="mini-tab" type="button">Code</button>
+        </div>
       </header>
 
       <section class="game-view" id="tetris-game">
@@ -145,21 +152,108 @@
           <button id="eightballStartBtn" type="button">New Game</button>
         </div>
       </section>
+
+      <section class="game-view chess-view" id="chess-game" hidden>
+        <header class="topbar">
+          <div class="title-wrap">
+            <div class="title">Chess</div>
+            <div class="subtitle">Two-player showdown</div>
+          </div>
+          <div class="hud">
+            <div class="stat">
+              <span class="label">Turn</span>
+              <span id="chessTurn">White</span>
+            </div>
+            <div class="stat">
+              <span class="label">Status</span>
+              <span id="chessStatus">Ready</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="chess-layout">
+          <div id="chessBoard" class="chess-board" aria-label="Chessboard" role="grid"></div>
+
+          <aside class="chess-sidebar">
+            <div class="panel-box">
+              <h2>Game</h2>
+              <div class="chess-actions">
+                <button id="chessResetBtn" type="button">New Game</button>
+                <button id="chessFlipBtn" type="button" class="secondary-btn">Flip Board</button>
+              </div>
+            </div>
+
+            <div class="panel-box">
+              <h2>Captured</h2>
+              <div class="captured-row">
+                <div class="captured-group">
+                  <span class="captured-label">White</span>
+                  <div id="whiteCaptured" class="captured-list"></div>
+                </div>
+                <div class="captured-group">
+                  <span class="captured-label">Black</span>
+                  <div id="blackCaptured" class="captured-list"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-box">
+              <h2>Moves</h2>
+              <ol id="moveHistory" class="move-history" aria-live="polite"></ol>
+            </div>
+          </aside>
+        </div>
+      </section>
     </main>
 
+    <div id="codeModal" class="code-modal hidden" aria-hidden="true">
+      <div class="code-panel">
+        <div class="code-header">
+          <h3>Secret Code</h3>
+          <button id="closeCodeModal" class="close-code" type="button" aria-label="Close code input">×</button>
+        </div>
+        <p>Use a code for a bonus in the current game.</p>
+        <input id="codeInput" type="text" maxlength="16" placeholder="Enter code" aria-label="Secret code" />
+        <div class="code-actions">
+          <button id="submitCodeBtn" type="button">Unlock</button>
+        </div>
+        <p class="code-status">Codes: EXTRA, FRIEND</p>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.13.4/chess.min.js"></script>
     <script src="script.js"></script>
     <script src="breakout.js"></script>
     <script src="pong.js"></script>
     <script src="eightball.js"></script>
+    <script src="chess.js"></script>
     <script>
       const gameSelect = document.getElementById('gameSelect');
       const gamePanels = document.querySelectorAll('.game-view');
+
+      const tabNames = {
+        'tetris-game': 'Tetris',
+        'breakout-game': 'Breakout',
+        'pong-game': 'Pong',
+        'eightball-game': '8 Ball',
+        'chess-game': 'Chess'
+      };
+
+      const updateTabName = (gameId) => {
+        const title = tabNames[gameId] || 'Classic Games';
+        document.title = `${title} | Classic Games`;
+      };
 
       gameSelect.addEventListener('change', () => {
         for (const panel of gamePanels) {
           panel.hidden = panel.id !== gameSelect.value;
         }
+        updateTabName(gameSelect.value);
       });
+
+      updateTabName(gameSelect.value);
     </script>
   </body>
 </html>
