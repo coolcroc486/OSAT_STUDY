@@ -11,174 +11,160 @@ document.addEventListener('DOMContentLoaded', () => {
   const ctx = canvas.getContext('2d');
   const W = canvas.width;
   const H = canvas.height;
-
   const pockets = [
-    { x: 28, y: 28 },
-    { x: W / 2, y: 22 },
-    { x: W - 28, y: 28 },
-    { x: 28, y: H - 28 },
-    { x: W / 2, y: H - 24 },
-    { x: W - 28, y: H - 28 },
+    { x: 20, y: 20 },
+    { x: W / 2, y: 20 },
+    { x: W - 20, y: 20 },
+    { x: 20, y: H - 20 },
+    { x: W / 2, y: H - 20 },
+    { x: W - 20, y: H - 20 },
   ];
-
-  const colors = ['#f87171', '#60a5fa', '#facc15', '#34d399', '#f472b6', '#c084fc', '#fb923c', '#111827'];
 
   let currentPlayer = 1;
   let group1 = 'Open';
   let group2 = 'Open';
   let isDragging = false;
-  let queuedShot = false;
-  let aimPoint = { x: W / 2, y: H / 2 };
-  let animationId = null;
-
-  function createBall(number, x, y, color, type = 'solid') {
-    return {
-      number,
-      x,
-      y,
-      radius: 12,
-      vx: 0,
-      vy: 0,
-      color,
-      type,
-      sunk: false,
-      label: number > 0 ? String(number) : '',
-    };
-  }
-
-  function buildRack() {
-    const balls = [];
-    const rackStartX = 680;
-    const rackStartY = H / 2;
-    const triangleRows = 5;
-    const colorsList = [
-      1, 2, 3, 4, 5, 6, 7,
-      9, 10, 11, 12, 13, 14, 15,
-    ];
-
-    for (let row = 0; row < triangleRows; row += 1) {
-      for (let col = 0; col <= row; col += 1) {
-        const idx = row * (row + 1) / 2 + col;
-        const total = 15;
-        if (idx >= total) break;
-        const ballIndex = colorsList[idx];
-        const x = rackStartX + row * 13 + col * 13;
-        const y = rackStartY + (row - col) * 13 * 0.5;
-        const ballColor = ballIndex === 8 ? '#111827' : colors[(ballIndex - 1) % colors.length];
-        const type = ballIndex === 8 ? 'eight' : ((ballIndex % 2 === 1 && ballIndex <= 7) ? 'solid' : 'stripe');
-        balls.push(createBall(ballIndex, x, y, ballColor, type));
-      }
-    }
-
-    const cueBall = createBall(0, 180, H / 2, '#f8fafc', 'cue');
-    return [cueBall, ...balls];
-  }
-
+  let hasShot = false;
+  let aimPoint = { x: 160, y: H / 2 };
   let balls = [];
 
-  function updateHud() {
+  const ballColors = [
+    '#f8fafc', '#f87171', '#60a5fa', '#facc15', '#34d399', '#f472b6', '#c084fc', '#111827', '#fb923c', '#93c5fd', '#a3e635', '#fca5a5', '#a78bfa', '#f9a8d4', '#fbbf24', '#a7f3d0',
+  ];
+
+  const createBall = (number, x, y, type = 'solid') => ({
+    number,
+    x,
+    y,
+    radius: 11,
+    vx: 0,
+    vy: 0,
+    color: ballColors[number] || '#f8fafc',
+    type,
+    sunk: false,
+  });
+
+  const updateHud = () => {
     if (turnEl) turnEl.textContent = `Player ${currentPlayer}`;
     if (group1El) group1El.textContent = group1;
     if (group2El) group2El.textContent = group2;
-  }
+  };
 
-  function setMessage(text) {
+  const setMessage = (text) => {
     if (messageEl) messageEl.textContent = text;
-  }
+  };
 
-  function resetGame() {
+  const buildRack = () => {
+    const rack = [];
+    const startX = 660;
+    const startY = H / 2 - 20;
+    const rows = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    let idx = 0;
+    for (let row = 0; row < 5; row += 1) {
+      for (let col = 0; col <= row; col += 1) {
+        const ballNumber = rows[idx];
+        if (!ballNumber) break;
+        const x = startX + row * 12 + col * 12;
+        const y = startY + (row - col) * 12 * 0.5;
+        const type = ballNumber === 8 ? 'eight' : (ballNumber <= 7 ? 'solid' : 'stripe');
+        rack.push(createBall(ballNumber, x, y, type));
+        idx += 1;
+      }
+    }
+    rack.push(createBall(0, 170, H / 2, 'cue'));
+    return rack;
+  };
+
+  const resetGame = () => {
     currentPlayer = 1;
     group1 = 'Open';
     group2 = 'Open';
-    queuedShot = false;
+    hasShot = false;
     isDragging = false;
-    aimPoint = { x: 180, y: H / 2 };
+    aimPoint = { x: 170, y: H / 2 };
     balls = buildRack();
     updateHud();
     setMessage('Aim with your mouse. Hold and release to shoot.');
-  }
+  };
 
-  function resolveBallCollision(a, b) {
+  const resolveBallCollision = (a, b) => {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
-    const distance = Math.hypot(dx, dy) || 0.0001;
-    const minDistance = a.radius + b.radius;
+    const dist = Math.hypot(dx, dy) || 0.0001;
+    const minDist = a.radius + b.radius;
+    if (dist >= minDist) return;
 
-    if (distance < minDistance) {
-      const nx = dx / distance;
-      const ny = dy / distance;
-      const overlap = minDistance - distance;
-      a.x -= nx * overlap * 0.5;
-      a.y -= ny * overlap * 0.5;
-      b.x += nx * overlap * 0.5;
-      b.y += ny * overlap * 0.5;
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const overlap = minDist - dist;
+    a.x -= nx * overlap * 0.5;
+    a.y -= ny * overlap * 0.5;
+    b.x += nx * overlap * 0.5;
+    b.y += ny * overlap * 0.5;
 
-      const rvx = b.vx - a.vx;
-      const rvy = b.vy - a.vy;
-      const velAlongNormal = rvx * nx + rvy * ny;
-
-      if (velAlongNormal < 0) {
-        const impulse = (-(1.1) * velAlongNormal) / 2;
-        a.vx -= impulse * nx;
-        a.vy -= impulse * ny;
-        b.vx += impulse * nx;
-        b.vy += impulse * ny;
-      }
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+    const velAlongNormal = rvx * nx + rvy * ny;
+    if (velAlongNormal < 0) {
+      const impulse = -velAlongNormal * 0.9;
+      a.vx -= impulse * nx;
+      a.vy -= impulse * ny;
+      b.vx += impulse * nx;
+      b.vy += impulse * ny;
     }
-  }
+  };
 
-  function handleWallCollisions(ball) {
+  const handleWallCollision = (ball) => {
     if (ball.x - ball.radius <= 0) {
       ball.x = ball.radius;
-      ball.vx *= -0.96;
+      ball.vx *= -0.95;
     }
     if (ball.x + ball.radius >= W) {
       ball.x = W - ball.radius;
-      ball.vx *= -0.96;
+      ball.vx *= -0.95;
     }
     if (ball.y - ball.radius <= 0) {
       ball.y = ball.radius;
-      ball.vy *= -0.96;
+      ball.vy *= -0.95;
     }
     if (ball.y + ball.radius >= H) {
       ball.y = H - ball.radius;
-      ball.vy *= -0.96;
+      ball.vy *= -0.95;
     }
-  }
+  };
 
-  function handlePocketing() {
-    const cue = balls[0];
+  const knockCueBack = () => {
+    const cue = balls.find((ball) => ball.number === 0);
+    if (!cue) return;
+    cue.x = 170;
+    cue.y = H / 2;
+    cue.vx = 0;
+    cue.vy = 0;
+    cue.sunk = false;
+  };
 
+  const handlePocketing = () => {
+    const cue = balls.find((ball) => ball.number === 0);
     for (let i = balls.length - 1; i >= 0; i -= 1) {
       const ball = balls[i];
-      const pocketed = pockets.some((pocket) => Math.hypot(ball.x - pocket.x, ball.y - pocket.y) < 22);
-
-      if (!pocketed || ball.sunk) continue;
+      if (ball.sunk) continue;
+      const inPocket = pockets.some((pocket) => Math.hypot(ball.x - pocket.x, ball.y - pocket.y) < 18);
+      if (!inPocket) continue;
 
       ball.sunk = true;
       ball.vx = 0;
       ball.vy = 0;
 
       if (ball.number === 0) {
-        cue.x = 180;
-        cue.y = H / 2;
-        cue.vx = 0;
-        cue.vy = 0;
-        cue.sunk = false;
-        setMessage('Scratch! The cue ball is back on the table.');
+        knockCueBack();
+        setMessage('Scratch! Cue ball back in play.');
         currentPlayer = currentPlayer === 1 ? 2 : 1;
         updateHud();
-        continue;
+        return;
       }
 
       if (ball.number === 8) {
-        if (group1 === 'Open' && group2 === 'Open') {
-          setMessage('Eight-ball sunk. Game over.');
-          queuedShot = false;
-          return;
-        }
-        setMessage(`Player ${currentPlayer} wins the rack!`);
-        queuedShot = false;
+        setMessage(`Player ${currentPlayer} pocketed the 8-ball.`);
         return;
       }
 
@@ -193,47 +179,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         setMessage(`Player ${currentPlayer} claims ${assigned}.`);
       }
-
-      if (ball.type === 'solid' && currentPlayer === 1) {
-        group1 = group1 === 'Open' ? 'Solid' : group1;
-      }
-      if (ball.type === 'stripe' && currentPlayer === 2) {
-        group2 = group2 === 'Open' ? 'Stripe' : group2;
-      }
     }
+  };
 
-    queuedShot = false;
-    currentPlayer = currentPlayer === 1 ? 2 : 1;
-    updateHud();
-  }
-
-  function shootBall() {
-    const cue = balls[0];
-    if (!cue) return;
-
+  const shootBall = () => {
+    const cue = balls.find((ball) => ball.number === 0);
+    if (!cue || hasShot) return;
     const dx = cue.x - aimPoint.x;
     const dy = cue.y - aimPoint.y;
-    const distance = Math.hypot(dx, dy) || 1;
-
-    cue.vx = (dx / distance) * 10;
-    cue.vy = (dy / distance) * 10;
-    queuedShot = true;
+    const dist = Math.hypot(dx, dy) || 1;
+    cue.vx = (dx / dist) * 11;
+    cue.vy = (dy / dist) * 11;
+    hasShot = true;
     setMessage(`Player ${currentPlayer} shoots.`);
-  }
+  };
 
-  function updatePhysics() {
-    for (let i = 0; i < balls.length; i += 1) {
-      const ball = balls[i];
+  const updatePhysics = () => {
+    for (const ball of balls) {
       if (ball.sunk) continue;
       ball.x += ball.vx;
       ball.y += ball.vy;
       ball.vx *= 0.992;
       ball.vy *= 0.992;
-
-      if (Math.abs(ball.vx) < 0.02) ball.vx = 0;
-      if (Math.abs(ball.vy) < 0.02) ball.vy = 0;
-
-      handleWallCollisions(ball);
+      if (Math.abs(ball.vx) < 0.05) ball.vx = 0;
+      if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
+      handleWallCollision(ball);
     }
 
     for (let i = 0; i < balls.length; i += 1) {
@@ -245,29 +215,28 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const moving = balls.some((ball) => !ball.sunk && (Math.abs(ball.vx) > 0.01 || Math.abs(ball.vy) > 0.01));
-    if (!moving && queuedShot) {
-      queuedShot = false;
+    handlePocketing();
+
+    const anyMoving = balls.some((ball) => !ball.sunk && (Math.abs(ball.vx) > 0.02 || Math.abs(ball.vy) > 0.02));
+    if (hasShot && !anyMoving) {
+      hasShot = false;
       currentPlayer = currentPlayer === 1 ? 2 : 1;
       updateHud();
       setMessage(`Player ${currentPlayer}'s turn.`);
     }
+  };
 
-    handlePocketing();
-  }
-
-  function drawTable() {
+  const drawTable = () => {
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#0b5d2d';
     ctx.fillRect(0, 0, W, H);
-
-    ctx.fillStyle = '#0c4728';
+    ctx.fillStyle = '#0a4927';
     ctx.fillRect(20, 20, W - 40, H - 40);
 
-    ctx.fillStyle = '#0a3b20';
     for (const pocket of pockets) {
       ctx.beginPath();
-      ctx.arc(pocket.x, pocket.y, 16, 0, Math.PI * 2);
+      ctx.fillStyle = '#050b10';
+      ctx.arc(pocket.x, pocket.y, 18, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -275,12 +244,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.strokeRect(20, 20, W - 40, H - 40);
 
     if (isDragging) {
-      ctx.beginPath();
-      ctx.moveTo(balls[0].x, balls[0].y);
-      ctx.lineTo(aimPoint.x, aimPoint.y);
-      ctx.strokeStyle = '#fef3c7';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      const cue = balls.find((ball) => ball.number === 0);
+      if (cue) {
+        ctx.beginPath();
+        ctx.moveTo(cue.x, cue.y);
+        ctx.lineTo(aimPoint.x, aimPoint.y);
+        ctx.strokeStyle = '#fef3c7';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
 
     for (const ball of balls) {
@@ -291,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fill();
       ctx.strokeStyle = 'rgba(15, 23, 42, 0.8)';
       ctx.stroke();
-
       if (ball.number > 0) {
         ctx.fillStyle = '#f8fafc';
         ctx.font = '10px Arial';
@@ -300,21 +271,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText(String(ball.number), ball.x, ball.y + 1);
       }
     }
-  }
+  };
 
-  function tick() {
+  const tick = () => {
     updatePhysics();
     drawTable();
-    animationId = requestAnimationFrame(tick);
-  }
+    requestAnimationFrame(tick);
+  };
 
   canvas.addEventListener('mousedown', (event) => {
     const rect = canvas.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * W;
     const y = ((event.clientY - rect.top) / rect.height) * H;
-    const cue = balls[0];
-    const dist = Math.hypot(cue.x - x, cue.y - y);
-    if (dist < 150 && !queuedShot) {
+    const cue = balls.find((ball) => ball.number === 0);
+    if (!cue || hasShot) return;
+    const distance = Math.hypot(cue.x - x, cue.y - y);
+    if (distance < 160) {
       isDragging = true;
       aimPoint = { x, y };
     }
@@ -329,21 +301,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   canvas.addEventListener('mouseup', () => {
-    if (isDragging && !queuedShot) {
+    if (isDragging) {
       shootBall();
+      isDragging = false;
     }
-    isDragging = false;
   });
 
   if (startBtn) {
     startBtn.addEventListener('click', () => {
       resetGame();
-      updateHud();
     });
   }
 
   resetGame();
   drawTable();
-  if (animationId) cancelAnimationFrame(animationId);
-  animationId = requestAnimationFrame(tick);
+  requestAnimationFrame(tick);
 });
